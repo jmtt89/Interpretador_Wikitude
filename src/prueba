@@ -1,6 +1,6 @@
 <scene>
 	<manifest 
-		tile = 'Probando Parser'
+		title = 'Probando Parser'
 		description = ' Veamos se Parsea Bien Todo'
 		tracker = './assets/tracking/Scena.zip'/>
 	
@@ -10,12 +10,13 @@
 		position = '2 2 2' 
 		scale = '1 2 3' 
 		rotation = "7 8 9"
-		source = './assets/models/modelo.obj'/>
+		source = './assets/models/modelo.obj'
+		target = "imagen"/>
 
 	<button
 		id = 'ID_Boton_1'
 		visible = 'true'
-		position = '4 5 6'
+		position = '4 5'
 		type = 'info'>
 	</button>
 </ scene>

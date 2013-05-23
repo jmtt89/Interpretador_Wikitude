@@ -1,8 +1,8 @@
 <scene>
 	<manifest 
-		title = 'Probando Parser'
-		description = ' Veamos se Parsea Bien Todo'
-		tracker = 'Scena.zip'/>
+		title = 'AR World'
+		description = 'Primera Pagina a Generar'
+		tracker = 'Wikitude_Logos.zip'/>
 	
 	<object 
 		id = "ID_OBJ_1"
@@ -10,8 +10,8 @@
 		position = '2 2 2' 
 		scale = '1 2 3' 
 		rotation = "7 8 9"
-		source = 'modelo.obj'
-		target = "imagen"/>
+		source = 'model.wt3'
+		target = "Wikitude_Logo_SeeMore"/>
 
 	<button
 		id = 'ID_Boton_1'

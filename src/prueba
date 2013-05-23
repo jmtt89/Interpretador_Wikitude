@@ -1,20 +1,21 @@
 <scene>
 	<manifest 
-		tile = "Probando Parser"
-		description = " Veamos se Parsea Bien Todo"
-		tracker = "./assets/tracking/Scena.zip"
-	></manifest>
+		tile = 'Probando Parser'
+		description = ' Veamos se Parsea Bien Todo'
+		tracker = './assets/tracking/Scena.zip'/>
 	
-	<object id="ID_OBJ_1" visible="true" position="2 2 2" scale="1 2 3" rotation="7 8 9" source="./assets/models/modelo.obj">
-	</object>
+	<object 
+		id = "ID_OBJ_1"
+		visible = "true" 
+		position = '2 2 2' 
+		scale = '1 2 3' 
+		rotation = "7 8 9"
+		source = './assets/models/modelo.obj'/>
 
 	<button
-		id = "ID_Boton_1"
-		visible = "true"
-		position = "4 5 6"
-		type = "info">
-
-		Boton de Prueba
+		id = 'ID_Boton_1'
+		visible = 'true'
+		position = '4 5 6'
+		type = 'info'>
 	</button>
-
-</scene>
+</ scene>

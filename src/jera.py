@@ -204,8 +204,8 @@ def Documentos(manifest,objetos,botones):
         <!-- CSS Styles -->
 
             <!-- CSS Bootstrap_Twitter -->
-            <link rel="stylesheet" type="text/css" href="./assets/stylesheet/bootstrap.min.css">
-            <link rel="stylesheet" type="text/css" href="./assets/stylesheet/bootstrap-responsive.min.css">
+            <link rel="stylesheet" type="text/css" href="./assets/stylesheet/bootstrap.css">
+            <link rel="stylesheet" type="text/css" href="./assets/stylesheet/bootstrap-responsive.css">
 
             <!-- CSS JERA -->
             <link rel="stylesheet" type="text/css" href="./assets/stylesheet/JERA.css">
@@ -222,8 +222,8 @@ def Documentos(manifest,objetos,botones):
             <!-- Include the ARchitect Desktop Engine for testing on a desktop browser-->
             <script type="text/javascript" src="./assets/javascript/ade.js"></script>
 
-            <!-- JavaScript Bootstrap_Twitter -->
-            <script type="text/javascript" src="./assets/javascript/bootstrap.min.js"></script>
+            <!-- JavaScript JQuery -->
+            <script type="text/javascript" src="./assets/javascript/jquery-1.9.1.min.js"></script>                
 
             <!-- JavaScript JERA -->
             <script type="text/javascript" src="./assets/javascript/JERA.js"></script>
@@ -315,6 +315,11 @@ function trackerLoaded()
 
   document.getElementById("message").style.display = "none";
 }
+
+$(document).ready(function(){
+    createTracker();
+})
+
     '''
   
   
@@ -332,7 +337,67 @@ function trackerLoaded()
     F_JS.write(js)
     F_CSS.write(css)
 
+###################### Default #####################
 
+def Default(manifest,objetos,botones):
+
+    Errors = []
+
+    ##Manifest
+    if( not 'title' in manifest ):
+        manifest['title'] = 'Aplicacion de Realidad Aumentada'
+    if( not 'description' in manifest ):
+        manifest['description'] = 'Aplicacion de Realidad Aumentada en Wikitude'
+    if( not 'tracker' in manifest ):
+        message = "La etiqueta manifest debe incluir el atributo tracker"
+        Errors.append(message)
+
+    ##Objetos
+    for objeto in objetos:
+        if( not 'visible' in objeto):
+            objeto['visible'] = 'true'
+        if( not 'position' in objeto):
+            objeto['position'] = '0 0 0'
+        if( not 'scale' in objeto):
+            objeto['scale'] = '1 1 1'
+        if( not 'rotation' in objeto):
+            objeto['rotation'] = '0 0 0'
+        if( not 'id' in objeto ):
+            message = "La etiqueta Object debe incluir el atributo id"
+            Errors.append(message)
+        if( not 'source' in objeto ):
+            message = "La etiqueta Object debe incluir el atributo source"
+            Errors.append(message)
+        if( not 'target' in objeto ):
+            message = "La etiqueta Object debe incluir el atributo target"
+            Errors.append(message)
+
+
+
+    ##Botones
+    for boton in botones:
+        if( not 'visible' in boton):
+            boton['visible'] = 'true'
+        if( not 'position' in boton):
+            boton['position'] = '0 0'            
+        if( not 'type' in boton):
+            boton['type'] = 'default'
+        if( not 'text' in boton):
+            boton['text'] = ' '
+        if( not 'size' in boton):
+            boton['size'] = '1'
+        if( not 'id' in boton ):
+            message = "La etiqueta button debe incluir el atributo id"
+            Errors.append(message)
+    message = ''
+    for Error in Errors:
+        message += Error + '\n'
+
+    if(len(Errors) > 0):
+        sys.exit(message)
+
+    ## Retorno
+    return [manifest,objetos,botones]
 
 
 ################# MAIN ##################
@@ -354,7 +419,16 @@ manifest = Res['manifest'][0]
 objects = Res['objects']
 buttons =Res['buttons']
 
+Res = Default(manifest,objects,buttons)
+
+manifest = Res[0]
+objects = Res[1]
+buttons =Res[2]
+
 Documentos(manifest,objects,buttons)
+
+
+## Generacion de Salida
 
 import os
 import shutil
@@ -386,6 +460,8 @@ shutil.copy2('./JERA.js', './public_html/assets/javascript')
 shutil.copy2('./My.js', './public_html/assets/javascript')
 shutil.copy2('../ADE/ade.js', './public_html/assets/javascript')
 shutil.copy2('../bootstrap_Twitter/js/bootstrap.min.js', './public_html/assets/javascript')
+shutil.copy2('../Jquery/jquery-1.9.1.min.js', './public_html/assets/javascript')
+
 
 shutil.copy2('./JERA.css', './public_html/assets/stylesheet')
 shutil.copy2('./My.css', './public_html/assets/stylesheet')

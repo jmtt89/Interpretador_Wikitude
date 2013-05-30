@@ -237,7 +237,7 @@ def Documentos(manifest,objetos,botones):
     '''
     for boton in botones:
         html+='''
-            <a id="'''+boton['id']+'''" class="btn btn-'''+boton['type']+'''"></a>
+            <a id="'''+boton['id']+'''" class="btn btn-'''+boton['type']+'''">'''+boton['text']+'''</a>
         '''
 
     html+='''
@@ -326,8 +326,8 @@ $(document).ready(function(){
   
     css = ' '
     for boton in botones:
-        [x,y] = boton['position'].split()
-        css+= '#'+boton['id']+'{ position: absolute;top:  '+x+'px; left: '+y+'px; }'
+        [x,y] = boton['position'].split()        
+        css+= '#'+boton['id']+'{ position: absolute; top:  '+x+'px; left: '+y+'px; padding: '+boton['size']+'px;}'
 
     F_HTML = open("index.html","w")
     F_JS = open("JERA.js","w")
@@ -337,67 +337,7 @@ $(document).ready(function(){
     F_JS.write(js)
     F_CSS.write(css)
 
-###################### Default #####################
 
-def Default(manifest,objetos,botones):
-
-    Errors = []
-
-    ##Manifest
-    if( not 'title' in manifest ):
-        manifest['title'] = 'Aplicacion de Realidad Aumentada'
-    if( not 'description' in manifest ):
-        manifest['description'] = 'Aplicacion de Realidad Aumentada en Wikitude'
-    if( not 'tracker' in manifest ):
-        message = "La etiqueta manifest debe incluir el atributo tracker"
-        Errors.append(message)
-
-    ##Objetos
-    for objeto in objetos:
-        if( not 'visible' in objeto):
-            objeto['visible'] = 'true'
-        if( not 'position' in objeto):
-            objeto['position'] = '0 0 0'
-        if( not 'scale' in objeto):
-            objeto['scale'] = '1 1 1'
-        if( not 'rotation' in objeto):
-            objeto['rotation'] = '0 0 0'
-        if( not 'id' in objeto ):
-            message = "La etiqueta Object debe incluir el atributo id"
-            Errors.append(message)
-        if( not 'source' in objeto ):
-            message = "La etiqueta Object debe incluir el atributo source"
-            Errors.append(message)
-        if( not 'target' in objeto ):
-            message = "La etiqueta Object debe incluir el atributo target"
-            Errors.append(message)
-
-
-
-    ##Botones
-    for boton in botones:
-        if( not 'visible' in boton):
-            boton['visible'] = 'true'
-        if( not 'position' in boton):
-            boton['position'] = '0 0'            
-        if( not 'type' in boton):
-            boton['type'] = 'default'
-        if( not 'text' in boton):
-            boton['text'] = ' '
-        if( not 'size' in boton):
-            boton['size'] = '1'
-        if( not 'id' in boton ):
-            message = "La etiqueta button debe incluir el atributo id"
-            Errors.append(message)
-    message = ''
-    for Error in Errors:
-        message += Error + '\n'
-
-    if(len(Errors) > 0):
-        sys.exit(message)
-
-    ## Retorno
-    return [manifest,objetos,botones]
 
 
 ################# MAIN ##################
@@ -419,16 +359,7 @@ manifest = Res['manifest'][0]
 objects = Res['objects']
 buttons =Res['buttons']
 
-Res = Default(manifest,objects,buttons)
-
-manifest = Res[0]
-objects = Res[1]
-buttons =Res[2]
-
 Documentos(manifest,objects,buttons)
-
-
-## Generacion de Salida
 
 import os
 import shutil
@@ -465,8 +396,8 @@ shutil.copy2('../Jquery/jquery-1.9.1.min.js', './public_html/assets/javascript')
 
 shutil.copy2('./JERA.css', './public_html/assets/stylesheet')
 shutil.copy2('./My.css', './public_html/assets/stylesheet')
-shutil.copy2('../bootstrap_Twitter/css/bootstrap-responsive.min.css', './public_html/assets/stylesheet')
-shutil.copy2('../bootstrap_Twitter/css/bootstrap.min.css', './public_html/assets/stylesheet')
+shutil.copy2('../bootstrap_Twitter/css/bootstrap-responsive.css', './public_html/assets/stylesheet')
+shutil.copy2('../bootstrap_Twitter/css/bootstrap.css', './public_html/assets/stylesheet')
 
 shutil.copy2('../bootstrap_Twitter/img/glyphicons-halflings-white.png', './public_html/assets/images')
 shutil.copy2('../bootstrap_Twitter/img/glyphicons-halflings.png', './public_html/assets/images')

@@ -1,22 +1,13 @@
 <scene>
 	<manifest 
-		title = 'AR World'
-		description = 'Primera Pagina a Generar'
-		tracker = 'Wikitude_Logos.zip'/>
+      />
 	
 	<object 
-		id = "ID_OBJ_1"
-		visible = "true" 
-		position = '2 2 2' 
-		scale = '1 2 3' 
-		rotation = "7 8 9"
-		source = 'model.wt3'
-		target = "Wikitude_Logo_SeeMore"/>
+		
+		
+		/>
 
 	<button
-		id = 'ID_Boton_1'
-		visible = 'true'
-		position = '4 5'
-		type = 'info'>
+		>
 	</button>
 </ scene>

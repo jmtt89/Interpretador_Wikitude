@@ -25,7 +25,7 @@ t_tag_ignore = ' \t\r\n'
 
 def t_tag_ATTRS(t):
     r'[a-zA-Z_0-9]+'
-    t.type = reserved.get(t.value,'ATTRS')
+    t.type = reserved.get(t.value, 'ATTRS')
     return t
     
 def t_tag_TAGCLOSE(t):
@@ -339,7 +339,8 @@ function errorAnimation() {
 	
     i = 0;
     for transicion in transiciones:
-        js += ''' 
+        if (transicion['visible'] == 'true'):
+            js += ''' 
 		
 function transition_''' + transicion['id'] + '''() {
 	if (! ''' + transicion['obj'] + ''' instanceof ARchitectObject) {
@@ -349,13 +350,7 @@ function transition_''' + transicion['id'] + '''() {
 	var animation = new AR.PropertyAnimation(
 		''' + transicion['obj'] + ''', 
 		''' + transicion['what'] + ''',
-		''' 
-        try:
-			js += transicion['start']
-        except Exception:
-			js += '''null'''
-		
-        js += ''',
+		''' + transicion['start'] + ''',
 		''' + transicion['end'] + ''',
 		''' + transicion['length'] + ''',
 		{},
@@ -381,9 +376,10 @@ function transition_''' + transicion['id'] + '''() {
 
 ###################### Default #####################
 
-def Default(manifest, objetos, botones):
+def Default(manifest, objetos, botones, transiciones):
 
     Errors = []
+    property_transition = ['position', 'scale', 'rotation']
 
     ## Manifest
     if( not 'title' in manifest ):
@@ -431,15 +427,42 @@ def Default(manifest, objetos, botones):
         if( not 'id' in boton ):
             message = "La etiqueta button debe incluir el atributo id"
             Errors.append(message)
+
+
+    ## Transiciones
+    for transicion in transiciones:
+        if( not 'visible' in transicion):
+            transicion['visible'] = 'true'
+        if( not 'start' in transicion):
+            transicion['start'] = 'null'
+        if( not 'length' in transicion):
+            transicion['length'] = '1000'
+        if( not 'times' in transicion):
+            transicion['times'] = '1'
+        if( not 'id' in  transicion):
+            message = "La etiqueta transition debe incluir el atributo id"
+            Errors.append(message)
+        if( not 'obj' in transicion):
+            message = "La etiqueta transition debe incluir el atributo obj"
+            Errors.append(message)
+        if( not 'end' in transicion):
+            message = "La etiqueta transition debe incluir el atributo end"
+            Errors.append(message)
+        if( not 'what' in transicion):
+            transicion['what'] = 'position'
+        elif ( not transicion['what'] in property_transition):
+            message = "Propiedad del objeto incorrecta en etiqueta transition"
+            Errors.append(message)
+	
     message = ''
     for Error in Errors:
         message += Error + '\n'
 
-    if(len(Errors) > 0):
+    if (len(Errors) > 0):
         sys.exit(message)
 
     ## Retorno
-    return [manifest,objetos,botones]
+    return [manifest, objetos, botones, transiciones]
 
 
 ################# MAIN ##################
@@ -460,13 +483,11 @@ Res = parser.parse(data, tracking = True)
 manifest = Res['manifest'][0]
 objects = Res['objects']
 buttons = Res['buttons']
-try:
-	transitions = Res['transitions']
-except Exception:
-	transitions = []
+transitions = Res['transitions']
+
 
 # Verificar errores y asignar valores por defecto
-Res = Default(manifest, objects, buttons)
+Res = Default(manifest, objects, buttons, transitions)
 
 manifest = Res[0]
 objects = Res[1]

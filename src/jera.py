@@ -4,7 +4,7 @@ import sys
 
 states = (('tag','exclusive'),('attr','exclusive'),('attr1','exclusive'),)
 
-reserved = {'scene':'SCENE','manifest':'MANIFEST','object':'OBJECT','button':'BUTTON'}
+reserved = {'scene':'SCENE','manifest':'MANIFEST','object':'OBJECT','button':'BUTTON', 'transition':'TRANSITION'}
 
 tokens = ['TAGOPEN','TAGCLOSEOPEN','TAGCLOSE','TAGLONE','ATTRS','ATTRASSIGN','ATTRVALOPEN','ATTRVALSTR','ATTRVALCLOSE','ATTRVALOPEN1','ATTRVALSTR1','ATTRVALCLOSE1',] + list(reserved.values())
 
@@ -110,16 +110,19 @@ def p_simpletag(p):
     p[1]['manifest'] += p[2]['manifest']
     p[1]['objects']  += p[2]['objects']
     p[1]['buttons']  += p[2]['buttons']
+    p[1]['transitions'] += p[2]['transitions']
     p[0] = p[1]
 #    p[0] = p[1] + p[2] + p[3]
     
 def p_opentag(p):
     '''opentag : TAGOPEN tagname attrs TAGCLOSE'''
-    p[0] = {'manifest':[],'objects':[],'buttons':[]}
+    p[0] = {'manifest':[],'objects':[],'buttons':[], 'transitions':[]}
     if p[2] == 'manifest':
         p[0]['manifest'] += [p[3]]
     elif p[2] == 'object':
         p[0]['objects'] += [p[3]]
+    elif p[2] == 'transition':
+        p[0]['transitions'] += [p[3]]
     elif p[2] == 'button':
         p[0]['buttons'] += [p[3]]
 #    p[0] = p[1] + p[2] + p[3] + p[4]
@@ -130,13 +133,15 @@ def p_closetag(p):
     
 def p_lonetag(p):
     '''lonetag : TAGOPEN tagname attrs TAGLONE'''
-    p[0] = {'manifest':[],'objects':[],'buttons':[]}
+    p[0] = {'manifest':[],'objects':[],'buttons':[], 'transitions':[]}
     if p[2] == 'manifest':
         p[0]['manifest'] += [p[3]]
     elif p[2] == 'object':
         p[0]['objects'] += [p[3]]
     elif p[2] == 'button':
         p[0]['buttons'] += [p[3]]
+    elif p[2] == 'transition':
+        p[0]['transitions'] += [p[3]]
 
 #    p[0] = p[1] + p[2] + p[3] + p[4]
     
@@ -144,7 +149,9 @@ def p_tagname(p):
     '''tagname : SCENE
         | MANIFEST
         | OBJECT
-        | BUTTON'''
+        | BUTTON
+        | TRANSITION 
+    '''
     p[0] = p[1]
     
 def p_attrs(p):
@@ -172,9 +179,10 @@ def p_child(p):
             p[2]['manifest'] += p[1]['manifest']
             p[2]['objects']  += p[1]['objects']
             p[2]['buttons']  += p[1]['buttons']
+            p[2]['transitions']  += p[1]['transitions']
             p[0] = p[2]
     else:
-        p[0] = {'manifest':[],'objects':[],'buttons':[]}
+        p[0] = {'manifest':[],'objects':[],'buttons':[], 'transitions':[]}
     
 def p_children(p):
     '''children : tag'''
@@ -189,14 +197,14 @@ def p_error(p):
 #########################################
 ### Generar el HTML , CSS y JS
 
-def Documentos(manifest,objetos,botones):
+def Documentos(manifest, objetos, botones, transiciones):
     html = '''
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
-        <meta name="Description" content="'''+manifest['description']+'''" >
-        <title>'''+manifest['title']+'''</title>
+        <meta name="Description" content="''' + manifest['description'] + '''" >
+        <title>''' + manifest['title'] + '''</title>
 
         <!-- Tamano de la Pantalla -->
         <meta name="viewport" content="target-densitydpi=device-dpi, width = 540, user-scalable = 0" />
@@ -236,11 +244,11 @@ def Documentos(manifest,objetos,botones):
         <div id="message"></div>
     '''
     for boton in botones:
-        html+='''
-            <a id="'''+boton['id']+'''" class="btn btn-'''+boton['type']+'''"></a>
+        html += '''
+            <a id="''' + boton['id'] + '''" class="btn btn-''' + boton['type'] + '''"></a>
         '''
 
-    html+='''
+    html += '''
     </body>
 </html>
     '''
@@ -259,7 +267,7 @@ function error() {
 function createTracker(){
 
   // create tracker 
-  var trackerDataSetPath = "./assets/tracker/'''+manifest['tracker']+'''";
+  var trackerDataSetPath = "./assets/tracker/''' + manifest['tracker'] + '''";
   var Tracker = new AR.Tracker(trackerDataSetPath, { onLoaded : trackerLoaded, onError: error });
   
 '''
@@ -285,22 +293,22 @@ function createTracker(){
         y : '''+ty+''',
         z : '''+tz+'''
     },
-    enabled : '''+objeto['visible']+'''
+    enabled : ''' + objeto['visible'] + '''
   });
 
 
   //start the model animation when the trackable comes into the field of vision
   var trackableOnEnterFieldOfVision = function(){
-      '''+objeto['id']+'''.enabled = true;
+      ''' + objeto['id'] + '''.enabled = true;
   }
   
   //disable the model when the Trackable is invisible
   var trackableOnExitFieldOfVision = function(){
-      '''+objeto['id']+'''.enabled = false;
+      ''' + objeto['id'] + '''.enabled = false;
     }
   
-  var trackable2DObject = new AR.Trackable2DObject(Tracker, "'''+objeto['target']+'''", {
-      drawables: { cam: ['''+objeto['id']+'''] },
+  var trackable2DObject = new AR.Trackable2DObject(Tracker, "''' + objeto['target'] + '''", {
+      drawables: { cam: [''' + objeto['id'] + '''] },
       onEnterFieldOfVision : trackableOnEnterFieldOfVision,
       onExitFieldOfVision : trackableOnExitFieldOfVision
   });
@@ -321,13 +329,47 @@ $(document).ready(function(){
 })
 
     '''
+	
+	# Cargar funciones de Transicion
+    js += ''' 
+function errorAnimation() {
+	document.getElementById("message").innerHTML = "Error Animation";
+}
+	'''
+	
+    i = 0;
+    for transicion in transiciones:
+        js += ''' 
+		
+function transition_''' + transicion['id'] + '''() {
+	if (! ''' + transicion['obj'] + ''' instanceof ARchitectObject) {
+		errorAnimation();
+		return;
+	}
+	var animation = new AR.PropertyAnimation(
+		''' + transicion['obj'] + ''', 
+		''' + transicion['what'] + ''',
+		''' 
+        try:
+			js += transicion['start']
+        except Exception:
+			js += '''null'''
+		
+        js += ''',
+		''' + transicion['end'] + ''',
+		''' + transicion['length'] + ''',
+		{},
+		{}
+	);
+}
+    '''
   
   
   
     css = ' '
     for boton in botones:
         [x,y] = boton['position'].split()
-        css+= '#'+boton['id']+'{ position: absolute;top:  '+x+'px; left: '+y+'px; }'
+        css += '#' + boton['id'] + '{ position: absolute;top:  ' + x + 'px; left: ' + y + 'px; }'
 
     F_HTML = open("index.html","w")
     F_JS = open("JERA.js","w")
@@ -339,11 +381,11 @@ $(document).ready(function(){
 
 ###################### Default #####################
 
-def Default(manifest,objetos,botones):
+def Default(manifest, objetos, botones):
 
     Errors = []
 
-    ##Manifest
+    ## Manifest
     if( not 'title' in manifest ):
         manifest['title'] = 'Aplicacion de Realidad Aumentada'
     if( not 'description' in manifest ):
@@ -352,7 +394,7 @@ def Default(manifest,objetos,botones):
         message = "La etiqueta manifest debe incluir el atributo tracker"
         Errors.append(message)
 
-    ##Objetos
+    ## Objetos
     for objeto in objetos:
         if( not 'visible' in objeto):
             objeto['visible'] = 'true'
@@ -374,7 +416,7 @@ def Default(manifest,objetos,botones):
 
 
 
-    ##Botones
+    ## Botones
     for boton in botones:
         if( not 'visible' in boton):
             boton['visible'] = 'true'
@@ -413,20 +455,24 @@ data = open(inputFile,'r').read()
 
 lexer = lex.lex()
 parser = yacc.yacc()
-Res = parser.parse(data,tracking=True)
+Res = parser.parse(data, tracking = True)
 
 manifest = Res['manifest'][0]
 objects = Res['objects']
-buttons =Res['buttons']
+buttons = Res['buttons']
+try:
+	transitions = Res['transitions']
+except Exception:
+	transitions = []
 
-Res = Default(manifest,objects,buttons)
+# Verificar errores y asignar valores por defecto
+Res = Default(manifest, objects, buttons)
 
 manifest = Res[0]
 objects = Res[1]
 buttons =Res[2]
 
-Documentos(manifest,objects,buttons)
-
+Documentos(manifest, objects, buttons, transitions)
 
 ## Generacion de Salida
 

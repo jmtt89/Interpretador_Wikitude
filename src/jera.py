@@ -4,7 +4,7 @@ import sys
 
 states = (('tag','exclusive'),('attr','exclusive'),('attr1','exclusive'),)
 
-reserved = {'scene':'SCENE','manifest':'MANIFEST','object':'OBJECT','button':'BUTTON', 'transition':'TRANSITION'}
+reserved = {'scene':'SCENE','manifest':'MANIFEST','object':'OBJECT','button':'BUTTON', 'transition':'TRANSITION', 'concurrent':'CONCURRENT', 'sequential':'SEQUENTIAL'}
 
 tokens = ['TAGOPEN','TAGCLOSEOPEN','TAGCLOSE','TAGLONE','ATTRS','ATTRASSIGN','ATTRVALOPEN','ATTRVALSTR','ATTRVALCLOSE','ATTRVALOPEN1','ATTRVALSTR1','ATTRVALCLOSE1',] + list(reserved.values())
 
@@ -81,7 +81,7 @@ def t_newline(t):
     t.lexer.lineno += len(t.value)
 
 def t_ANY_error(t):
-    print "Error: '"+str(t.value[0])+"' en Linea "+ str(t.lexer.lineno)+" en La Columna"+str(find_column(data,t))
+    print "Error: '" + str(t.value[0]) + "' en Linea " + str(t.lexer.lineno) + " en La Columna " + str(find_column(data,t))
     t.lexer.skip(1)
     
 def find_column(input,token):
@@ -97,74 +97,75 @@ def find_column(input,token):
 import lex
 
 pila_tag = [] #en caso de emergencia rompa el vidrio
-common_attr = ['id','visible','position']
-manifest_attr_req = ['title','description','tracker']
-objects_attr_req = common_attr + ['scale','rotation','source','target']
-button_attr_req = common_attr + ['type','text','size']
-
-def is_valid_attr(attrs,lista):
-	if len(attrs) != len(lista):
-		print 'Error: Falta atributo requerido'
-		sys.exit()
-	for i in attrs:
-		if not(i in lista):
-			print 'Error: Atributo inesperado "' + i +'"'
-			sys.exit()
-		if (attrs.count(i) != 1):
-			print 'Error: Atributo ya evaluado "'+i+'"'
-			sys.exit()
-
 start = 'tag'
+# Construir lista de etiquetas a partir de la lista de palabras reservadas
+nodes = reserved.copy()
+del nodes['scene']
+labels = list(nodes.keys())
 
 def p_tag(p):
     '''tag : simpletag
-        | lonetag
     '''
     p[0] = p[1]
         
 def p_simpletag(p):
-    '''simpletag : opentag child closetag'''
-    p[1]['manifest'] += p[2]['manifest']
-    p[1]['objects']  += p[2]['objects']
-    p[1]['buttons']  += p[2]['buttons']
-    p[1]['transitions'] += p[2]['transitions']
+    '''simpletag : actiontag simpletag 
+        | opentag simpletag
+        | lonetag simpletag
+        | closetag simpletag
+        | lambda'''
+    if (len(p) > 2):
+        for item in p[2]:
+            try:
+                p[1][item] += p[2][item]
+            except Exception:
+                p[1][item] = []
+                p[1][item] += p[2][item]
+    else:
+        for label in labels:
+            p[1][label] = []
+    #p[1]['manifest'] += p[2]['manifest']
+    #p[1]['objects']  += p[2]['objects']
+    #p[1]['buttons']  += p[2]['buttons']
+    #p[1]['transitions'] += p[2]['transitions']
     p[0] = p[1]
 #    p[0] = p[1] + p[2] + p[3]
     
 def p_opentag(p):
     '''opentag : TAGOPEN tagname attrs TAGCLOSE'''
-    p[0] = {'manifest':[],'objects':[],'buttons':[], 'transitions':[]}
-    if p[2] == 'manifest':
-		is_valid_attr(pila_tag,manifest_attr_req)
-		p[0]['manifest'] += [p[3]]
-    elif p[2] == 'object':
-		is_valid_attr(pila_tag,objects_attr_req)
-		p[0]['objects'] += [p[3]]
-    elif p[2] == 'transition':
-        p[0]['transitions'] += [p[3]]
-    elif p[2] == 'button':
-		is_valid_attr(pila_tag,button_attr_req)
-		p[0]['buttons'] += [p[3]]
+    #p[0] = {'manifest':[],'objects':[],'buttons':[], 'transitions':[]}
+    p[0] = {}
+    if p[2] in labels:
+        p[0][p[2]] = [p[3]]
+    #if p[2] == 'manifest':
+    #    p[0]['manifest'] += [p[3]]
+    #elif p[2] == 'object':
+    #    p[0]['objects'] += [p[3]]
+    #elif p[2] == 'transition':
+    #    p[0]['transitions'] += [p[3]]
+    #elif p[2] == 'button':
+    #    p[0]['buttons'] += [p[3]]
 #    p[0] = p[1] + p[2] + p[3] + p[4]
 
 def p_closetag(p):
     '''closetag : TAGCLOSEOPEN tagname TAGCLOSE'''
+    p[0] = {}
 #    p[0] = p[1] + p[2] + p[3]
     
 def p_lonetag(p):
     '''lonetag : TAGOPEN tagname attrs TAGLONE'''
-    p[0] = {'manifest':[],'objects':[],'buttons':[], 'transitions':[]}
-    if p[2] == 'manifest':
-		is_valid_attr(pila_tag,manifest_attr_req)
-		p[0]['manifest'] += [p[3]]
-    elif p[2] == 'object':
-		is_valid_attr(pila_tag,objects_attr_req)
-		p[0]['objects'] += [p[3]]
-    elif p[2] == 'button':
-		is_valid_attr(pila_tag,button_attr_req)
-		p[0]['buttons'] += [p[3]]
-    elif p[2] == 'transition':
-		p[0]['transitions'] += [p[3]]
+    p[0] = {}
+    if p[2] in labels:
+        p[0][p[2]] = [p[3]]
+    #p[0] = {'manifest':[],'objects':[],'buttons':[], 'transitions':[]}
+    #if p[2] == 'manifest':
+    #    p[0]['manifest'] += [p[3]]
+    #elif p[2] == 'object':
+    #    p[0]['objects'] += [p[3]]
+    #elif p[2] == 'button':
+    #    p[0]['buttons'] += [p[3]]
+    #elif p[2] == 'transition':
+    #    p[0]['transitions'] += [p[3]]
 
 #    p[0] = p[1] + p[2] + p[3] + p[4]
     
@@ -181,13 +182,11 @@ def p_attrs(p):
     '''attrs : ATTRS ATTRASSIGN atributo attrs
         | lambda'''
     if len(p) != 2:
-		pila_tag.append(str(p[1]))
-		aux = {str(p[1]):str(p[3])}
-		aux.update(p[4])
-		p[0] = aux
+        aux = {str(p[1]):str(p[3])}
+        aux.update(p[4])
+        p[0] = aux
     else:
-		del pila_tag[0:len(pila_tag)]
-		p[0] = {}
+        p[0] = {}
 
 def p_atributo(p):
     '''atributo : ATTRVALOPEN ATTRVALSTR ATTRVALCLOSE
@@ -196,33 +195,40 @@ def p_atributo(p):
     p[0] = p[2]
 #    p[0] = p[1] + p[2] + p[3]
     
-def p_child(p):
-    '''child : child children 
-        | lambda'''
-    if len(p) > 2:
-        if p[2]:
-            p[2]['manifest'] += p[1]['manifest']
-            p[2]['objects']  += p[1]['objects']
-            p[2]['buttons']  += p[1]['buttons']
-            p[2]['transitions']  += p[1]['transitions']
-            p[0] = p[2]
-    else:
-        p[0] = {'manifest':[],'objects':[],'buttons':[], 'transitions':[]}
-    
-def p_children(p):
-    '''children : tag'''
-    p[0] = p[1]
-    
 def p_lambda(p):
     'lambda : '
+    p[0] = {}
+
+def p_actiontag(p):
+    '''actiontag : TAGOPEN action attrs TAGCLOSE plusaction'''
+    p[0] = {}
+    p[0][p[2]] = [p[3]]
+    p[0][p[2]][0]['animation'] = p[5]['id']
+    p[0]['transition'] = p[5]['transition']
+	
+def p_action(p):
+    '''action : CONCURRENT
+	    | SEQUENTIAL'''
+    p[0] = p[1]
+
+def p_plusaction(p):
+    '''plusaction : TAGOPEN TRANSITION attrs TAGLONE plusaction
+        | TAGCLOSEOPEN action TAGCLOSE'''
+    if len(p) > 4:
+        p[5]['transition'] += [p[3]]
+        p[5]['id'] += [p[3]['id']]
+        p[0] = p[5]
+    else:
+        p[0] = {'transition':[], 'id':[]}
     
 def p_error(p):
     print 'Error de sintaxis ' + str(p)
     pass
+
 #########################################
 ### Generar el HTML , CSS y JS
 
-def Documentos(manifest, objetos, botones, transiciones):
+def Documentos(manifest, objetos, botones, transiciones, concurrencias, secuencias):
     html = '''
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
@@ -270,7 +276,7 @@ def Documentos(manifest, objetos, botones, transiciones):
     '''
     for boton in botones:
         html += '''
-            <a id="'''+boton['id']+'''" class="btn btn-'''+boton['type']+'''">'''+boton['text']+'''</a>
+            <a id="''' + boton['id'] + '''" class="btn btn-''' + boton['type'] + '''"></a>
         '''
 
     html += '''
@@ -279,10 +285,15 @@ def Documentos(manifest, objetos, botones, transiciones):
     '''
 
         
-
+    
     js = '''
 /* Global variables */
 var errorOccured = false;
+'''
+    for objeto in objetos:
+        js += '''
+var ''' + objeto['id'] + ''';'''
+    js += '''
 
 function error() {
   errorOccured = true;
@@ -360,36 +371,113 @@ $(document).ready(function(){
 function errorAnimation() {
 	document.getElementById("message").innerHTML = "Error Animation";
 }
+
+function createAnimation {
+
+	this.error_animation = false;
+	this.animation = null;
+
+	// Verificar parametros de la animacion
+	function animationLoaded(animation, visibility) {
+		if (!animation instanceof ARchitectObject) {
+			errorAnimation();
+			this.error_animation = true;
+		}
+		if (!visibility) {
+			this.error_animation = true;
+		}
+	}
+
+	// Create Animations
 	'''
 	
-    i = 0;
     for transicion in transiciones:
-        if (transicion['visible'] == 'true'):
-            js += ''' 
-		
-function transition_''' + transicion['id'] + '''() {
-	if (! ''' + transicion['obj'] + ''' instanceof ARchitectObject) {
-		errorAnimation();
-		return;
-	}
-	var animation = new AR.PropertyAnimation(
-		''' + transicion['obj'] + ''', 
-		''' + transicion['what'] + ''',
-		''' + transicion['start'] + ''',
-		''' + transicion['end'] + ''',
-		''' + transicion['length'] + ''',
-		{},
-		{}
-	);
+        js += '''  
+	
+	function transition_''' + transicion['id'] + '''() {
+		animationLoaded(''' + transicion['obj'] + ''', ''' + transicion['visible'] + ''')
+		this.animation = new AR.PropertyAnimation(
+			''' + transicion['obj'] + ''', 
+			''' + transicion['what'] + ''',
+			''' + transicion['start'] + ''',
+			''' + transicion['end'] + ''',
+			''' + transicion['length'] + ''',
+			{},
+			{}
+		);
+	} '''
+    js += '''
 }
     '''
-  
-  
-  
+
+    for transicion in transiciones:
+        js += ''' 
+
+function ''' + transicion['id'] + '''() {
+	var animation_object = new createAnimation();
+	animation_object.transition_''' + transicion['id'] + '''();
+	if (!this.error_animation) {
+		animation_object.animation.start(''' + transicion['times'] + ''');
+	}
+}
+        '''
+
+    for secuencia in secuencias:
+        visibilidad = secuencia['visible']
+        animaciones = secuencia['animation']
+        js += '''
+
+function ''' + secuencia['id'] + '''() {
+    var animations = new Array;
+	var animation_object = null;
+	var i = 0;
+	if (''' + visibilidad + ''') {'''
+        for animacion in animaciones:
+            js += '''
+		animation_object = new createAnimation();
+		animation_object.transition_''' + str(animacion) + '''();
+		if (!this.error_animation) {
+			animations[i] = animation_object.animation;
+			i++;
+		}
+            '''
+        js += '''
+		var animationGroup = new AR.AnimationGroup(AR.CONST.ANIMATION_GROUP_TYPE.SEQUENTIAL, animations, {});
+		animationGroup.start(''' + secuencia['times'] + ''');
+	}
+}
+        '''
+
+    for concurrencia in concurrencias:
+        visibilidad = concurrencia['visible']
+        animaciones = concurrencia['animation']
+        js += '''
+
+function ''' + concurrencia['id'] + '''() {
+    var animations = new Array;
+	var animation_object = null;
+	var i = 0;
+	if (''' + visibilidad + ''') {'''
+        for animacion in animaciones:
+            js += '''
+		animation_object = new createAnimation();
+		animation_object.transition_''' + animacion['id'] + '''();
+		if (!this.error_animation) {
+			animations[i] = animation_object.animation;
+			i++;
+		}
+            '''
+        js += '''
+		var animationGroup = new AR.AnimationGroup(AR.CONST.ANIMATION_GROUP_TYPE.PARALLEL, animations, {});
+		animationGroup.start(''' + concurrencia['times'] + ''');
+	}
+}
+        '''
+
     css = ' '
     for boton in botones:
         [x,y] = boton['position'].split()
-        css+= '#'+boton['id']+'{ position: absolute; top:  '+x+'px; left: '+y+'px; padding: '+boton['size']+'px;}'
+        css += '#' + boton['id'] + '{ position: absolute;top:  ' + x + 'px; left: ' + y + 'px; }'
 
     F_HTML = open("index.html","w")
     F_JS = open("JERA.js","w")
@@ -401,7 +489,7 @@ function transition_''' + transicion['id'] + '''() {
 
 ###################### Default #####################
 
-def Default(manifest, objetos, botones, transiciones):
+def Default(manifest, objetos, botones, transiciones, concurrencias, secuencias):
 
     Errors = []
     property_transition = ['position', 'scale', 'rotation']
@@ -442,7 +530,7 @@ def Default(manifest, objetos, botones, transiciones):
         if( not 'visible' in boton):
             boton['visible'] = 'true'
         if( not 'position' in boton):
-            boton['position'] = '0 0'            
+            boton['position'] = '0 0'
         if( not 'type' in boton):
             boton['type'] = 'default'
         if( not 'text' in boton):
@@ -452,7 +540,6 @@ def Default(manifest, objetos, botones, transiciones):
         if( not 'id' in boton ):
             message = "La etiqueta button debe incluir el atributo id"
             Errors.append(message)
-
 
     ## Transiciones
     for transicion in transiciones:
@@ -478,7 +565,27 @@ def Default(manifest, objetos, botones, transiciones):
         elif ( not transicion['what'] in property_transition):
             message = "Propiedad del objeto incorrecta en etiqueta transition"
             Errors.append(message)
-	
+
+    ## Concurrencias
+    for concurrencia in concurrencias:
+        if( not 'visible' in concurrencia):
+            concurrencia['visible'] = 'true'
+        if( not 'times' in concurrencia):
+            concurrencia['times'] = '1'
+        if( not 'id' in concurrencia):
+            message = "La etiqueta concurrent debe incluir el atributo id"
+            Errors.append(message)
+
+    ## Secuencias
+    for secuencia in secuencias:
+        if( not 'visible' in secuencia):
+            secuencia['visible'] = 'true'
+        if( not 'times' in secuencia):
+            secuencia['times'] = '1'
+        if( not 'id' in secuencia):
+            message = "La etiqueta sequential debe incluir el atributo id"
+            Errors.append(message)
+
     message = ''
     for Error in Errors:
         message += Error + '\n'
@@ -487,7 +594,7 @@ def Default(manifest, objetos, botones, transiciones):
         sys.exit(message)
 
     ## Retorno
-    return [manifest, objetos, botones, transiciones]
+    #return [manifest, objetos, botones, transiciones]
 
 
 ################# MAIN ##################
@@ -506,19 +613,22 @@ parser = yacc.yacc()
 Res = parser.parse(data, tracking = True)
 
 manifest = Res['manifest'][0]
-objects = Res['objects']
-buttons = Res['buttons']
-transitions = Res['transitions']
+objects = Res['object']
+buttons = Res['button']
+transitions = Res['transition']
+sequentials = Res['sequential']
+concurrents = Res['concurrent']
 
 
 # Verificar errores y asignar valores por defecto
-Res = Default(manifest, objects, buttons, transitions)
+Default(manifest, objects, buttons, transitions, concurrents, sequentials)
 
-manifest = Res[0]
-objects = Res[1]
-buttons =Res[2]
+# No hace falta, las lista son mutables
+#manifest = Res[0]
+#objects = Res[1]
+#buttons =Res[2]
 
-Documentos(manifest, objects, buttons, transitions)
+Documentos(manifest, objects, buttons, transitions, concurrents, sequentials)
 
 ## Generacion de Salida
 

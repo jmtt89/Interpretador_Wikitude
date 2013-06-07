@@ -257,6 +257,8 @@ def Documentos(Arbol):
     botones  = Find(Arbol,'button')
     modelos  = Find(Arbol,'object')
     Events   = Childrens(Arbol,'event')
+    Buttons  = Childrens(Arbol,'button')
+    Models   = Childrens(Arbol,'object')
 
     html = '''
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
@@ -505,8 +507,36 @@ $(document).ready(function(){
     createTracker();
     LoadAnim();
 });
-                '''                
-  
+
+$(document).ready(function(){
+    '''
+
+    for Model in Models:
+        js+='''
+    Models["'''+Model.attributos['id']+'''"].onClick(function(){
+        '''
+        for Event in Model.hijos:
+            js+='''
+        Animations["'''+Event.attributos['id']+'''"].start(1);
+            '''
+        js+='''
+        });
+        '''
+    for Button in Buttons:
+        js+='''
+    $("'''+Button.attributos['id']+'''").click(function() {
+        '''
+        for Event in Button.hijos:
+            js+='''
+        Animations["'''+Event.attributos['id']+'''"].start(1);
+            '''
+        js+='''
+    });
+        '''
+    js+='''
+});
+    '''
+
     css = ' '
     for boton in botones:
         [x,y] = boton['position'].split()

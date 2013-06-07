@@ -1,0 +1,75 @@
+Cambios en diseño
+
+El problema que veo en la mayoria de las cosas es que los nombres se escriben diferente
+para las mismas cosas y no me parece que debe ser asi, en general propongo que el objetivo
+de las etiquetas se llame <<<< target >>>> no otros nombres diferentes como he visto en general
+
+Los archivos a cargar (audio o imagenes) se llamen <<<< filename >>>>
+
+
+____________________________________________________________________________________-
+
+que el id de transition sea el target no se entiende 
+no me parece logico deberia llamarce target en todo caso 
+y en mi opinion deberia tenerlo es el event que lo contiene
+asi todo lo que este dentro de un evento se le va a aplicar al target de ese evento
+
+deberia quedar algo asi
+
+	<button .... >
+		<event id="..."  type="..." target="Flyer">
+			<sequence>
+				<transition what="position" end="2 2 0" length="1000" />
+				<transition what="position" end="2 2 0" length="1000" />
+			</sequence>
+		</event>
+	</button>
+
+
+ahora los transition creo que tambien deben cambiar cosas de nombre
+length creo que deberia llamarce duration 
+
+por defecto transition deberia tener un start?? o siempre va a ser el que tiene???
+
+propongo que sea asi:
+
+	<button .... >
+		<event id="..."  type="..." target="Flyer">
+			<sequence>
+				<transition what="position" start="1 5 3" end="2 2 0" duration="1000" />
+				<transition what="position" end="2 2 0" duration="1000" />
+			</sequence>
+		</event>
+	</button>
+
+
+_________________________________________________________________________________________-
+
+La etiquera audio creo que deberia ser asi
+
+<audio id="Audio_1" filename="..."  playonload="..." />
+
+y la que lo reproduce algo como esto 
+
+<play target="Audio_1"  /> 
+
+__________________________________________________________________________________________-
+
+el caso de set igual que antes
+
+envez de llamarce tag se llame target y como dije arriba el target deberia tenerlo el event
+
+	<event ... target="Flyer">
+		<set what="visible"  to="false"/> 
+	</event>
+
+Adicionalmente propongo agregar toggle 
+	<event ... >
+		<toggle/>
+	</event>
+
+normalmente toggle se utiliza para true ponerlo false y false ponerlo true 
+como el unico booleano que estamos manejando es para mostrar o ocultar cosas 
+no haria falta tmpoco el parametro what
+
+

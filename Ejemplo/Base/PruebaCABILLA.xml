@@ -1,0 +1,42 @@
+<scene>
+    <manifest 
+        title = 'Flyer Test'
+        description = 'Segunda Pagina a Generar'
+        tracker = 'Prueba.zip'/>
+    
+    <object id = "Flyer" visible = "true" position = '0 0 0' scale = '0.01 0.01 0.01' rotation = "0 0 0" source = 'flyer.wt3' target = "LogoCentral">
+        <event id="EVE_3"  type="onclick" >
+            <parallel>
+                <transition id="trans_5" what="scale" end="0.02 0.02 0.02" duration="1000"/>
+                <transition id="trans_6" what="rotation" end="90 180 90" duration="1000"/>
+            </parallel>
+        </event>
+    </object>
+
+    <audio id="Aud_1" filename="NOMBRE DEL AUDIO"  playonload="False" />
+
+    <button id = 'ID_Boton_1' visible = 'true' position = '10 540' type = 'success' text = "Botón 1" size = "50">
+        <event id="EVE_1"  type="onclick" target="Flyer">
+            <sequence>
+                <transition id="trans_1" what="position" start="1 5 3" end="2 2 0" duration="1000" />
+                <transition id="trans_2" what="position" end="2 2 0" duration="1000" />
+            </sequence>
+        </event>
+    </button>
+    
+    <button id = 'ID_Boton_2' visible = 'true' position = '10 140' type = 'success' text = "Botón 2" size = "30">
+        <event id="EVE_2"  type="onclick" target="Flyer">
+            <play target="Aud_1" /> 
+            <toggle/> 
+        </event>
+    </button>
+
+    <button id = 'ID_Boton_3' visible = 'true' position = '10 300' type = 'success' text = "Botón 3" size = "40">
+        <event id="EVE_4" type="onclick" target="Flyer">
+            <transition id="trans_3" what="scale" end="1 1 1" duration="10000"/>
+            <play target="Aud_1" />
+            <transition id="trans_4" what="rotation" end="45 90 15" duration="10000"/>
+        </event>
+    </button>
+    
+</scene>

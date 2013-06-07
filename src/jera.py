@@ -4,7 +4,7 @@ import sys
 
 states = (('tag','exclusive'),('attr','exclusive'),('attr1','exclusive'),)
 
-reserved = {'scene':'SCENE','manifest':'MANIFEST','object':'OBJECT','button':'BUTTON', 'transition':'TRANSITION', 'concurrent':'CONCURRENT', 'sequential':'SEQUENTIAL'}
+reserved = {'scene':'SCENE','manifest':'MANIFEST','object':'OBJECT','button':'BUTTON','group':'GROUP','play':'PLAY','event':'EVENT','sequence':'SEQUENCE','parallel':'PARALLEL','transition':'TRANSITION','audio':'AUDIO','set':'SET','toggle':'TOGGLE'}
 
 tokens = ['TAGOPEN','TAGCLOSEOPEN','TAGCLOSE','TAGLONE','ATTRS','ATTRASSIGN','ATTRVALOPEN','ATTRVALSTR','ATTRVALCLOSE','ATTRVALOPEN1','ATTRVALSTR1','ATTRVALCLOSE1',] + list(reserved.values())
 
@@ -25,7 +25,7 @@ t_tag_ignore = ' \t\r\n'
 
 def t_tag_ATTRS(t):
     r'[a-zA-Z_0-9]+'
-    t.type = reserved.get(t.value, 'ATTRS')
+    t.type = reserved.get(t.value,'ATTRS')
     return t
     
 def t_tag_TAGCLOSE(t):
@@ -81,8 +81,9 @@ def t_newline(t):
     t.lexer.lineno += len(t.value)
 
 def t_ANY_error(t):
-    print "Error: '" + str(t.value[0]) + "' en Linea " + str(t.lexer.lineno) + " en La Columna " + str(find_column(data,t))
+    print "Error: '"+str(t.value[0])+"' en Linea "+ str(t.lexer.lineno)+" en La Columna "+str(find_column(data,t))
     t.lexer.skip(1)
+    sys.exit()
     
 def find_column(input,token):
     last_cr = input.rfind('\n',0,token.lexpos)
@@ -97,95 +98,102 @@ def find_column(input,token):
 import lex
 
 pila_tag = [] #en caso de emergencia rompa el vidrio
+pila_tag_to_validate = []
+common_attr = ['id','visible','translate']
+manifest_attr_req = ['title','description','tracker']
+object_attr_req = common_attr + ['scale','rotate','source','target']
+button_attr_req = common_attr + ['type','text','size']
+
+import re
+
+def is_valid_attr(attrs,values,lista):
+    if len(attrs) != len(lista):
+        print 'Error: Falta atributo requerido'
+        sys.exit()
+    for (e1,e2) in zip(attrs,values):
+        if not(e1 in lista):
+            print 'Error: Atributo inesperado "' + e1 +'"'
+            sys.exit()
+        if (attrs.count(e1) != 1):
+            print 'Error: Atributo repetido "'+e1+'"'
+            sys.exit()
+        validate_value(e1,e2)
+
+def validate_value(tipo,valor):
+    if tipo == 'visible':
+        if re.match(r'(true|false)',valor):
+            return
+    elif tipo == 'translate':
+        if re.match(r'\d+[ ]+\d+[ ]+\d+',valor) or re.match(r'\d+[ ]+\d+',valor):
+            return
+    elif tipo == 'type':
+        if re.match(r'(default|primary|info|success|danger|warning|inverse)',valor):
+            return
+    elif tipo == 'rotate' or tipo == 'scale':
+        if re.match(r'\d+[ ]+\d+[ ]+\d+',valor):
+            return
+    elif tipo == 'size':
+        if re.match(r'\d+',valor):
+            return
+    elif tipo == 'tracker' or tipo == 'description' or tipo == 'id' or tipo == 'title' or tipo == 'source' or tipo == 'target' or tipo == 'text':
+        if re.match(r'[a-zA-Z_0-9]+',valor):
+            return
+    print 'Error: valor de atributo invalido "' + valor + '"'
+    sys.exit()
+
 start = 'tag'
-# Construir lista de etiquetas a partir de la lista de palabras reservadas
-nodes = reserved.copy()
-del nodes['scene']
-labels = list(nodes.keys())
 
 def p_tag(p):
     '''tag : simpletag
+        | lonetag
     '''
     p[0] = p[1]
         
 def p_simpletag(p):
-    '''simpletag : actiontag simpletag 
-        | opentag simpletag
-        | lonetag simpletag
-        | closetag simpletag
-        | lambda'''
-    if (len(p) > 2):
-        for item in p[2]:
-            try:
-                p[1][item] += p[2][item]
-            except Exception:
-                p[1][item] = []
-                p[1][item] += p[2][item]
-    else:
-        for label in labels:
-            p[1][label] = []
-    #p[1]['manifest'] += p[2]['manifest']
-    #p[1]['objects']  += p[2]['objects']
-    #p[1]['buttons']  += p[2]['buttons']
-    #p[1]['transitions'] += p[2]['transitions']
+    '''simpletag : opentag child closetag'''
+    p[1].hijos = p[2]
     p[0] = p[1]
 #    p[0] = p[1] + p[2] + p[3]
     
 def p_opentag(p):
     '''opentag : TAGOPEN tagname attrs TAGCLOSE'''
-    #p[0] = {'manifest':[],'objects':[],'buttons':[], 'transitions':[]}
-    p[0] = {}
-    if p[2] in labels:
-        p[0][p[2]] = [p[3]]
-    #if p[2] == 'manifest':
-    #    p[0]['manifest'] += [p[3]]
-    #elif p[2] == 'object':
-    #    p[0]['objects'] += [p[3]]
-    #elif p[2] == 'transition':
-    #    p[0]['transitions'] += [p[3]]
-    #elif p[2] == 'button':
-    #    p[0]['buttons'] += [p[3]]
+    p[0] = Dom.Element(p[2],p[3])
 #    p[0] = p[1] + p[2] + p[3] + p[4]
 
 def p_closetag(p):
     '''closetag : TAGCLOSEOPEN tagname TAGCLOSE'''
-    p[0] = {}
-#    p[0] = p[1] + p[2] + p[3]
     
 def p_lonetag(p):
     '''lonetag : TAGOPEN tagname attrs TAGLONE'''
-    p[0] = {}
-    if p[2] in labels:
-        p[0][p[2]] = [p[3]]
-    #p[0] = {'manifest':[],'objects':[],'buttons':[], 'transitions':[]}
-    #if p[2] == 'manifest':
-    #    p[0]['manifest'] += [p[3]]
-    #elif p[2] == 'object':
-    #    p[0]['objects'] += [p[3]]
-    #elif p[2] == 'button':
-    #    p[0]['buttons'] += [p[3]]
-    #elif p[2] == 'transition':
-    #    p[0]['transitions'] += [p[3]]
-
-#    p[0] = p[1] + p[2] + p[3] + p[4]
+    p[0] = Dom.Element(p[2],p[3])
     
 def p_tagname(p):
     '''tagname : SCENE
         | MANIFEST
         | OBJECT
         | BUTTON
-        | TRANSITION 
-    '''
+		| EVENT
+		| AUDIO
+		| SET
+		| SEQUENCE
+        | PARALLEL
+		| TRANSITION
+		| PLAY
+        | TOGGLE'''
     p[0] = p[1]
     
 def p_attrs(p):
     '''attrs : ATTRS ATTRASSIGN atributo attrs
         | lambda'''
     if len(p) != 2:
+        pila_tag.append(str(p[1]))
+        pila_tag_to_validate.append(str(p[3]))
         aux = {str(p[1]):str(p[3])}
         aux.update(p[4])
         p[0] = aux
     else:
+        del pila_tag[0:len(pila_tag)]
+        del pila_tag_to_validate[0:len(pila_tag_to_validate)]
         p[0] = {}
 
 def p_atributo(p):
@@ -193,49 +201,70 @@ def p_atributo(p):
         | ATTRVALOPEN1 ATTRVALSTR1 ATTRVALCLOSE1
     '''
     p[0] = p[2]
-#    p[0] = p[1] + p[2] + p[3]
+    
+def p_child(p):
+    '''child : child children 
+        | lambda'''
+    if len(p) == 3:
+        p[0] = p[1] + [p[2]]
+    else:
+        p[0] = []
+    
+def p_children(p):
+    '''children : tag'''
+    p[0] = p[1]
     
 def p_lambda(p):
     'lambda : '
-    p[0] = {}
-
-def p_actiontag(p):
-    '''actiontag : TAGOPEN action attrs TAGCLOSE plusaction'''
-    p[0] = {}
-    p[0][p[2]] = [p[3]]
-    p[0][p[2]][0]['animation'] = p[5]['id']
-    p[0]['transition'] = p[5]['transition']
-	
-def p_action(p):
-    '''action : CONCURRENT
-	    | SEQUENTIAL'''
-    p[0] = p[1]
-
-def p_plusaction(p):
-    '''plusaction : TAGOPEN TRANSITION attrs TAGLONE plusaction
-        | TAGCLOSEOPEN action TAGCLOSE'''
-    if len(p) > 4:
-        p[5]['transition'] += [p[3]]
-        p[5]['id'] += [p[3]['id']]
-        p[0] = p[5]
-    else:
-        p[0] = {'transition':[], 'id':[]}
     
-def p_error(p):
+def p_ANY_error(p):
     print 'Error de sintaxis ' + str(p)
     pass
 
 #########################################
+### Clase de Arbol
+
+class Dom:
+    class Element:
+        def __init__(self,nombre, attr = {}, hijos = []):
+            self.nombre = nombre
+            self.attributos = attr
+            self.hijos = hijos
+
+        def __str__(self):
+            attributes_str = ''
+            for attr in self.attributos:
+                attributes_str += ' %s="%s"' % (attr, self.attributos[attr])
+
+            children_str = ''
+            for child in self.hijos:
+                if isinstance(child, self.__class__):
+                    children_str += str(child)
+                else:
+                    children_str += child
+
+            return '<%s %s>\n%s\n</%s>'% (self.nombre, attributes_str, children_str, self.nombre)
+            
+        def __repr__(self):
+            return str(self)
+
+#########################################
 ### Generar el HTML , CSS y JS
 
-def Documentos(manifest, objetos, botones, transiciones, concurrencias, secuencias):
+def Documentos(Arbol):
+
+    manifest = Find(Arbol,'manifest')[0]
+    botones  = Find(Arbol,'button')
+    modelos  = Find(Arbol,'object')
+    Events   = Childrens(Arbol,'event')
+
     html = '''
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
 <html>
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=ISO-8859-1">
-        <meta name="Description" content="''' + manifest['description'] + '''" >
-        <title>''' + manifest['title'] + '''</title>
+        <meta name="Description" content="'''+manifest['description']+'''" >
+        <title>'''+manifest['title']+'''</title>
 
         <!-- Tamano de la Pantalla -->
         <meta name="viewport" content="target-densitydpi=device-dpi, width = 540, user-scalable = 0" />
@@ -275,25 +304,21 @@ def Documentos(manifest, objetos, botones, transiciones, concurrencias, secuenci
         <div id="message"></div>
     '''
     for boton in botones:
-        html += '''
-            <a id="''' + boton['id'] + '''" class="btn btn-''' + boton['type'] + '''"></a>
+        html+='''
+            <a id="'''+boton['id']+'''" class="btn btn-'''+boton['type']+'''"></a>
         '''
 
-    html += '''
+    html+='''
     </body>
 </html>
     '''
 
         
-    
+
     js = '''
 /* Global variables */
 var errorOccured = false;
-'''
-    for objeto in objetos:
-        js += '''
-var ''' + objeto['id'] + ''';'''
-    js += '''
+var Models = {}
 
 function error() {
   errorOccured = true;
@@ -303,17 +328,21 @@ function error() {
 function createTracker(){
 
   // create tracker 
-  var trackerDataSetPath = "./assets/tracker/''' + manifest['tracker'] + '''";
+  var trackerDataSetPath = "./assets/tracker/'''+manifest['tracker']+'''";
   var Tracker = new AR.Tracker(trackerDataSetPath, { onLoaded : trackerLoaded, onError: error });
   
 '''
-    for objeto in objetos:
-        [tx,ty,tz] = objeto['position'].split()
-        [rx,ry,rz] = objeto['rotation'].split()
-        [sx,sy,sz] = objeto['scale'].split()
+###############################   Cargar Modelos  ###########################################
+#############################################################################################
+
+    for modelo in modelos:
+        [tx,ty,tz] = modelo['translate'].split()
+        [rx,ry,rz] = modelo['rotate'].split()
+        [sx,sy,sz] = modelo['scale'].split()
         js+=''' 
+
   // create the Model
-  var '''+objeto['id']+''' = new AR.Model("./assets/models/'''+objeto['source']+'''", {
+  var '''+modelo['id']+''' = new AR.Model("./assets/models/'''+modelo['source']+'''", {
     scale : {
         x : '''+sx+''',
         y : '''+sy+''',
@@ -329,22 +358,29 @@ function createTracker(){
         y : '''+ty+''',
         z : '''+tz+'''
     },
-    enabled : ''' + objeto['visible'] + '''
+    enabled : '''+modelo['visible']+''',
+    onClick : function(){
+        //Si existen Eventos Asociados a un on click de modelo generar aqui
+    }
+
+    
+    
   });
+    
+    Models["'''+modelo['id']+'''"] = '''+modelo['id']+'''   
 
-
-  //start the model animation when the trackable comes into the field of vision
+  //Habilitar el modelo cuando entra en el campo de Vision
   var trackableOnEnterFieldOfVision = function(){
-      ''' + objeto['id'] + '''.enabled = true;
+      '''+modelo['id']+'''.enabled = true;
   }
   
-  //disable the model when the Trackable is invisible
+  //Desabilitar el modelo cuando sale del campo de Vision
   var trackableOnExitFieldOfVision = function(){
-      ''' + objeto['id'] + '''.enabled = false;
+      '''+modelo['id']+'''.enabled = false;
     }
   
-  var trackable2DObject = new AR.Trackable2DObject(Tracker, "''' + objeto['target'] + '''", {
-      drawables: { cam: [''' + objeto['id'] + '''] },
+  var trackable2DObject = new AR.Trackable2DObject(Tracker, "'''+modelo['target']+'''", {
+      drawables: { cam: ['''+modelo['id']+'''] },
       onEnterFieldOfVision : trackableOnEnterFieldOfVision,
       onExitFieldOfVision : trackableOnExitFieldOfVision
   });
@@ -360,124 +396,121 @@ function trackerLoaded()
   document.getElementById("message").style.display = "none";
 }
 
-$(document).ready(function(){
-    createTracker();
-})
-
     '''
-	
-	# Cargar funciones de Transicion
+
+
+###################### Cargar Animaciones #################################
+###########################################################################
     js += ''' 
 function errorAnimation() {
-	document.getElementById("message").innerHTML = "Error Animation";
+    document.getElementById("message").innerHTML = "Error Animation";
 }
 
-function createAnimation {
+var Animations = {}
 
-	this.error_animation = false;
-	this.animation = null;
+function LoadAnim(){
+    
+    function CreateTransition(Atributos){
 
-	// Verificar parametros de la animacion
-	function animationLoaded(animation, visibility) {
-		if (!animation instanceof ARchitectObject) {
-			errorAnimation();
-			this.error_animation = true;
-		}
-		if (!visibility) {
-			this.error_animation = true;
-		}
-	}
+        var What;
+        if (Atributos['what'] != 'rotate') { 
+            What = {x:Atributos['what']+".x",y:Atributos['what']+".y",z:Atributos['what']+".z"};
+        } else { 
+            What = {x:Atributos['what']+".tilt",y:Atributos['what']+".heading",z:Atributos['what']+".roll"};
+        } 
 
-	// Create Animations
-	'''
-	
-    for transicion in transiciones:
-        js += '''  
-	
-	function transition_''' + transicion['id'] + '''() {
-		animationLoaded(''' + transicion['obj'] + ''', ''' + transicion['visible'] + ''')
-		this.animation = new AR.PropertyAnimation(
-			''' + transicion['obj'] + ''', 
-			''' + transicion['what'] + ''',
-			''' + transicion['start'] + ''',
-			''' + transicion['end'] + ''',
-			''' + transicion['length'] + ''',
-			{},
-			{}
-		);
-	} '''
-    js += '''
-}
-    '''
+        var X = new AR.PropertyAnimation(
+            Models[Atributos['target']],
+            What['x'],
+            Atributos['sx'], 
+            Atributos['ex'], 
+            Atributos['duration'],
+            {type: AR.CONST.EASING_CURVE_TYPE.LINEAR}
+            );
 
-    for transicion in transiciones:
-        js += ''' 
+        var Y = new AR.PropertyAnimation(
+            Models[Atributos['target']], 
+            What['y'],
+            Atributos['sy'], 
+            Atributos['ey'], 
+            Atributos['duration'],
+            {type: AR.CONST.EASING_CURVE_TYPE.LINEAR}
+            );
 
-function ''' + transicion['id'] + '''() {
-	var animation_object = new createAnimation();
-	animation_object.transition_''' + transicion['id'] + '''();
-	if (!this.error_animation) {
-		animation_object.animation.start(''' + transicion['times'] + ''');
-	}
-}
+        var Z = new AR.PropertyAnimation(
+            Models[Atributos['target']], 
+            What['z'],
+            Atributos['sz'], 
+            Atributos['ez'], 
+            Atributos['duration'],
+            {type: AR.CONST.EASING_CURVE_TYPE.LINEAR}
+            );
+
+        return new AR.AnimationGroup(
+            AR.CONST.ANIMATION_GROUP_TYPE.PARALLEL,
+            [X,Y,Z]
+        );
+    }
+
+    var Aux;
+    var AnimArray = [];
+    var AnimSeqnc = [];
         '''
-
-    for secuencia in secuencias:
-        visibilidad = secuencia['visible']
-        animaciones = secuencia['animation']
-        js += '''
-
-function ''' + secuencia['id'] + '''() {
-    var animations = new Array;
-	var animation_object = null;
-	var i = 0;
-	if (''' + visibilidad + ''') {'''
-        for animacion in animaciones:
-            js += '''
-		animation_object = new createAnimation();
-		animation_object.transition_''' + str(animacion) + '''();
-		if (!this.error_animation) {
-			animations[i] = animation_object.animation;
-			i++;
-		}
-            '''
-        js += '''
-		var animationGroup = new AR.AnimationGroup(AR.CONST.ANIMATION_GROUP_TYPE.SEQUENTIAL, animations, {});
-		animationGroup.start(''' + secuencia['times'] + ''');
-	}
-}
+### Donde Events son SubArboles y Event es un SubArbol Particular
+    for Event in Events:
+        js+='AnimSeqnc = [];'
+        for Child in Event.hijos:
+            if(Child.nombre == "transition"):
+                [sx,sy,sz] = Child.attributos['start'].split()
+                [ex,ey,ez] = Child.attributos['end'].split()   
+                js+='''
+    Aux = {target:"'''+Child.attributos['target']+'''",what:"'''+Child.attributos['what']+'''",sx:'''+sx+''',sy:'''+sy+''',sz:'''+sz+''',ex:'''+ex+''',ey:'''+ey+''',ez:'''+ez+''',duration:'''+Child.attributos['duration']+'''};
+    AnimSeqnc.push(CreateTransition(Aux));
+                '''
+            if(Child.nombre == "sequence"):
+                js+='''
+    AnimArray = [];
+                '''
+                for transition in Child.hijos:
+                    [sx,sy,sz] = transition.attributos['start'].split()
+                    [ex,ey,ez] = transition.attributos['end'].split()                       
+                    js+='''
+    Aux = {target:"'''+transition.attributos['target']+'''",what:"'''+transition.attributos['what']+'''",sx:'''+sx+''',sy:'''+sy+''',sz:'''+sz+''',ex:'''+ex+''',ey:'''+ey+''',ez:'''+ez+''',duration:'''+transition.attributos['duration']+'''};
+    AnimArray.push(CreateTransition(Aux));
+                    '''
+                js+='''
+    AnimSeqnc.push(new AR.AnimationGroup(AR.CONST.ANIMATION_GROUP_TYPE.SEQUENTIAL,AnimArray));
+                '''
+            if(Child.nombre == "parallel"):
+                js+='''
+    AnimArray = [];
+                '''
+                for transition in Child.hijos:
+                    [sx,sy,sz] = transition.attributos['start'].split()
+                    [ex,ey,ez] = transition.attributos['end'].split()                       
+                    js+='''
+    Aux = {target:"'''+transition.attributos['target']+'''",what:"'''+transition.attributos['what']+'''",sx:'''+sx+''',sy:'''+sy+''',sz:'''+sz+''',ex:'''+ex+''',ey:'''+ey+''',ez:'''+ez+''',duration:'''+transition.attributos['duration']+'''};
+    AnimArray.push(CreateTransition(Aux))
+                    '''
+                js+='''
+    AnimSeqnc.push(new AR.AnimationGroup(AR.CONST.ANIMATION_GROUP_TYPE.PARALLEL,AnimArray));
+                '''
+        js+='''
+    Animations["'''+Event.attributos['id']+'''"] = new AR.AnimationGroup(AR.CONST.ANIMATION_GROUP_TYPE.SEQUENTIAL,AnimSeqnc);
         '''
-
-    for concurrencia in concurrencias:
-        visibilidad = concurrencia['visible']
-        animaciones = concurrencia['animation']
-        js += '''
-
-function ''' + concurrencia['id'] + '''() {
-    var animations = new Array;
-	var animation_object = null;
-	var i = 0;
-	if (''' + visibilidad + ''') {'''
-        for animacion in animaciones:
-            js += '''
-		animation_object = new createAnimation();
-		animation_object.transition_''' + animacion['id'] + '''();
-		if (!this.error_animation) {
-			animations[i] = animation_object.animation;
-			i++;
-		}
-            '''
-        js += '''
-		var animationGroup = new AR.AnimationGroup(AR.CONST.ANIMATION_GROUP_TYPE.PARALLEL, animations, {});
-		animationGroup.start(''' + concurrencia['times'] + ''');
-	}
+    js+='''
 }
-        '''
 
+$(document).ready(function(){
+    createTracker();
+    LoadAnim();
+});
+                '''                
+  
     css = ' '
     for boton in botones:
         [x,y] = boton['position'].split()
-        css += '#' + boton['id'] + '{ position: absolute;top:  ' + x + 'px; left: ' + y + 'px; }'
+        css+= '#'+boton['id']+'{ position: absolute;top:  '+x+'px; left: '+y+'px; }'
 
     F_HTML = open("index.html","w")
     F_JS = open("JERA.js","w")
@@ -487,114 +520,134 @@ function ''' + concurrencia['id'] + '''() {
     F_JS.write(js)
     F_CSS.write(css)
 
-###################### Default #####################
+######################################################################
+######################################################################
+##############   Funciones Basicas sobre el Arbol ####################
+######################################################################
+######################################################################
 
-def Default(manifest, objetos, botones, transiciones, concurrencias, secuencias):
-
-    Errors = []
-    property_transition = ['position', 'scale', 'rotation']
-
-    ## Manifest
-    if( not 'title' in manifest ):
-        manifest['title'] = 'Aplicacion de Realidad Aumentada'
-    if( not 'description' in manifest ):
-        manifest['description'] = 'Aplicacion de Realidad Aumentada en Wikitude'
-    if( not 'tracker' in manifest ):
-        message = "La etiqueta manifest debe incluir el atributo tracker"
-        Errors.append(message)
-
-    ## Objetos
-    for objeto in objetos:
-        if( not 'visible' in objeto):
-            objeto['visible'] = 'true'
-        if( not 'position' in objeto):
-            objeto['position'] = '0 0 0'
-        if( not 'scale' in objeto):
-            objeto['scale'] = '1 1 1'
-        if( not 'rotation' in objeto):
-            objeto['rotation'] = '0 0 0'
-        if( not 'id' in objeto ):
-            message = "La etiqueta Object debe incluir el atributo id"
-            Errors.append(message)
-        if( not 'source' in objeto ):
-            message = "La etiqueta Object debe incluir el atributo source"
-            Errors.append(message)
-        if( not 'target' in objeto ):
-            message = "La etiqueta Object debe incluir el atributo target"
-            Errors.append(message)
+### Lista de Atributos de un nodo con Id
+def FindID(Arbol,ID):
+    if ('id' in Arbol.attributos and Arbol.attributos['id'] == ID ):
+        return Arbol.attributos
+    else:
+        for child in Arbol.hijos:
+            tmp = FindID(child,ID)
+            if(tmp):
+                return tmp
+        return False
 
 
+### Lista de diccionario de Atributos de todos los nodos nodo Key
+def Find(Arbol,key):
+    Res = []
+    FindAux(Arbol,key,Res)
+    return Res
 
-    ## Botones
-    for boton in botones:
-        if( not 'visible' in boton):
-            boton['visible'] = 'true'
-        if( not 'position' in boton):
-            boton['position'] = '0 0'
-        if( not 'type' in boton):
-            boton['type'] = 'default'
-        if( not 'text' in boton):
-            boton['text'] = ' '
-        if( not 'size' in boton):
-            boton['size'] = '1'
-        if( not 'id' in boton ):
-            message = "La etiqueta button debe incluir el atributo id"
-            Errors.append(message)
+def FindAux(Arbol,key,Res):
+    if (Arbol.nombre == key) :
+        Res.append(Arbol.attributos)
 
-    ## Transiciones
-    for transicion in transiciones:
-        if( not 'visible' in transicion):
-            transicion['visible'] = 'true'
-        if( not 'start' in transicion):
-            transicion['start'] = 'null'
-        if( not 'length' in transicion):
-            transicion['length'] = '1000'
-        if( not 'times' in transicion):
-            transicion['times'] = '1'
-        if( not 'id' in  transicion):
-            message = "La etiqueta transition debe incluir el atributo id"
-            Errors.append(message)
-        if( not 'obj' in transicion):
-            message = "La etiqueta transition debe incluir el atributo obj"
-            Errors.append(message)
-        if( not 'end' in transicion):
-            message = "La etiqueta transition debe incluir el atributo end"
-            Errors.append(message)
-        if( not 'what' in transicion):
-            transicion['what'] = 'position'
-        elif ( not transicion['what'] in property_transition):
-            message = "Propiedad del objeto incorrecta en etiqueta transition"
-            Errors.append(message)
+    for child in Arbol.hijos:
+       FindAux(child,key,Res)
 
-    ## Concurrencias
-    for concurrencia in concurrencias:
-        if( not 'visible' in concurrencia):
-            concurrencia['visible'] = 'true'
-        if( not 'times' in concurrencia):
-            concurrencia['times'] = '1'
-        if( not 'id' in concurrencia):
-            message = "La etiqueta concurrent debe incluir el atributo id"
-            Errors.append(message)
+### Lista con los SubArboles de un Key
 
-    ## Secuencias
-    for secuencia in secuencias:
-        if( not 'visible' in secuencia):
-            secuencia['visible'] = 'true'
-        if( not 'times' in secuencia):
-            secuencia['times'] = '1'
-        if( not 'id' in secuencia):
-            message = "La etiqueta sequential debe incluir el atributo id"
-            Errors.append(message)
+def Childrens(Arbol,key):
+    Res = []
+    ChildrensAUX(Arbol,key,Res)
+    return Res
 
-    message = ''
-    for Error in Errors:
-        message += Error + '\n'
+def ChildrensAUX(Arbol,key,Res):
+    if(Arbol.nombre == key):
+        Res.append(Arbol)
+   
+    for Arb in Arbol.hijos:
+        ChildrensAUX(Arb,key,Res)
 
-    if (len(Errors) > 0):
-        sys.exit(message)
 
-    ## Retorno
-    #return [manifest, objetos, botones, transiciones]
+#### Imprime el Arbol
+def PrintArb(Arbol):
+    str = Arbol.nombre + "|"
+    for Child in Arbol.hijos:
+        str += Child.nombre + ","
+    str += '\n'
+    for Child in Arbol.hijos:
+        str += PrintArb(Child)
+
+    return str
+
+###################################################################
+###################################################################
+#################   Default Sobre el Arbol ########################
+###################################################################
+###################################################################
+
+def Optional(Arbol,prop,val):
+    if( not prop in Arbol.attributos ):
+        Arbol.attributos[prop] = val
+
+
+def AssingTarget(Arbol,target):
+    if( not 'target' in Arbol.attributos ):
+        Arbol.attributos['target'] = target
+
+        for child in Arbol.hijos:
+            AssingTarget(child,target)
+
+
+def Assing_Auto_ID(Arbol):
+    Assing_Auto_ID_AUX(Arbol,'event',0)
+    Assing_Auto_ID_AUX(Arbol,'transition',0)
+    Assing_Auto_ID_AUX(Arbol,'toggle',0)
+    Assing_Auto_ID_AUX(Arbol,'play',0)
+
+
+def Assing_Auto_ID_AUX(Arbol,key,index):
+    if(Arbol.nombre == key and not 'id' in Arbol.attributos):
+        Arbol.attributos['id'] = Arbol.nombre+"_"+str(index)
+
+    for child in Arbol.hijos:
+        Assing_Auto_ID_AUX(child,key,index+1)
+
+def Default (Arbol):
+    Assing_Auto_ID(Arbol)
+    DefaultAux(Arbol,Arbol)
+
+
+def DefaultAux(ArbolCompleto,Arbol):
+
+    if(Arbol.nombre == 'manifest'):
+        Optional(Arbol,'title',"Aplicacion de Realidad Aumentada en JERA")
+        Optional(Arbol,'description',"Aplicacion de Realidad Aumentada en JERA ")
+
+    if(Arbol.nombre == 'object'):
+        Optional(Arbol,'visible',"true")
+        Optional(Arbol,'translate',"0 0 0")
+        Optional(Arbol,'scale',"1 1 1")
+        Optional(Arbol,'rotate',"0 0 0")
+        for child in Arbol.hijos:
+            AssingTarget(child,Arbol.attributos['id'])
+
+    if(Arbol.nombre == 'event'):
+        for child in Arbol.hijos:
+            AssingTarget(child,Arbol.attributos['target'])
+
+    if(Arbol.nombre == 'transition'):
+        bsq = Arbol.attributos['what']
+        lst = FindID(ArbolCompleto,Arbol.attributos['target'])
+        Optional(Arbol,'start',lst[bsq])
+
+    if(Arbol.nombre == 'button'):
+        Optional(Arbol,'visible',"true")
+        Optional(Arbol,'type',"default")
+        Optional(Arbol,'size',"30")
+
+    if(Arbol.nombre == 'audio'):
+        Optional(Arbol,'playonload',"false")        
+
+    for child in Arbol.hijos:
+        DefaultAux(ArbolCompleto,child)
 
 
 ################# MAIN ##################
@@ -610,27 +663,15 @@ data = open(inputFile,'r').read()
 
 lexer = lex.lex()
 parser = yacc.yacc()
-Res = parser.parse(data, tracking = True)
-
-manifest = Res['manifest'][0]
-objects = Res['object']
-buttons = Res['button']
-transitions = Res['transition']
-sequentials = Res['sequential']
-concurrents = Res['concurrent']
+Res = parser.parse(data,tracking=True)
 
 
-# Verificar errores y asignar valores por defecto
-Default(manifest, objects, buttons, transitions, concurrents, sequentials)
+Default(Res)
+Documentos(Res)
 
-# No hace falta, las lista son mutables
-#manifest = Res[0]
-#objects = Res[1]
-#buttons =Res[2]
 
-Documentos(manifest, objects, buttons, transitions, concurrents, sequentials)
-
-## Generacion de Salida
+manifest = Find(Res,'manifest')[0]
+objects  = Find(Res,'object')
 
 import os
 import shutil
@@ -661,7 +702,7 @@ for objeto in objects:
 shutil.copy2('./JERA.js', './public_html/assets/javascript')
 shutil.copy2('./My.js', './public_html/assets/javascript')
 shutil.copy2('../ADE/ade.js', './public_html/assets/javascript')
-shutil.copy2('../bootstrap_Twitter/js/bootstrap.min.js', './public_html/assets/javascript')
+shutil.copy2('../bootstrap_Twitter/js/bootstrap.js', './public_html/assets/javascript')
 shutil.copy2('../Jquery/jquery-1.9.1.min.js', './public_html/assets/javascript')
 
 

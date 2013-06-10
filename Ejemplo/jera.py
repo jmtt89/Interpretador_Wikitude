@@ -604,14 +604,14 @@ $(document).ready(function(){
 
     for Button in Buttons:
         js+='''
-    $("'''+Button.attributos['id']+'''").click = function() {
+    $("#'''+Button.attributos['id']+'''").click(function() {
         '''
         for Event in Button.hijos:
             js+='''
         Animations["'''+Event.attributos['id']+'''"].start(1);
             '''
         js+='''
-    }
+    });
         '''
     js+='''
 });

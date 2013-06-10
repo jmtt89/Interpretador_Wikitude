@@ -72,4 +72,10 @@ normalmente toggle se utiliza para true ponerlo false y false ponerlo true
 como el unico booleano que estamos manejando es para mostrar o ocultar cosas 
 no haria falta tmpoco el parametro what
 
+_____________________________________________________________________________________________
+
+rotation ---> rotate
+
+position ---> translate
+
 

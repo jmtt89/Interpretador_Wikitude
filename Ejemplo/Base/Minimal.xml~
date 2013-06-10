@@ -11,7 +11,7 @@
 		</event>
 	</object>
 
-	<audio id="Aud_1" filename="Total_Breakdown.mp3" />
+	<audio id="Aud_1" filename="NOMBRE DEL AUDIO" />
 
 	<button id= 'ID_Boton_1' position = '10 540' text = "Botón 1" >
 		<event type="onclick" target="Flyer">
@@ -24,7 +24,7 @@
 	
 	<button id='ID_Boton_2' position = '10 140' text = "Botón 2" >
 		<event type="onclick" target="Flyer">
-			<play start="Aud_1" /> 
+			<play target="Aud_1" /> 
 			<toggle/> 
 		</event>
 	</button>
@@ -32,7 +32,7 @@
 	<button id='ID_Boton_3' position = '10 300' text = "Botón 3">
 		<event type="onclick" target="Flyer">
 			<transition what="scale" end="1 1 1" duration="10000"/>
-			<play start="Aud_1" />
+			<play target="Aud_1" />
 			<transition what="rotate" end="45 90 15" duration="10000"/>
 		</event>
 	</button>

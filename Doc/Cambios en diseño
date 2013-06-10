@@ -78,4 +78,8 @@ rotation ---> rotate
 
 position ---> translate
 
+______________________________________________________________________________________________
+10/06/13
+
+en el tag play cambiar target ---> start (porque necesito target para otra cosa internamente)
 

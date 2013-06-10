@@ -256,6 +256,7 @@ def Documentos(Arbol):
     manifest = Find(Arbol,'manifest')[0]
     botones  = Find(Arbol,'button')
     modelos  = Find(Arbol,'object')
+    audios   = Find(Arbol, 'audio')
     Events   = Childrens(Arbol,'event')
     Buttons  = Childrens(Arbol,'button')
     Models   = Childrens(Arbol,'object')
@@ -307,7 +308,7 @@ def Documentos(Arbol):
     '''
     for boton in botones:
         html+='''
-            <a id="'''+boton['id']+'''" class="btn btn-'''+boton['type']+'''"></a>
+            <a id="'''+boton['id']+'''" class="btn btn-'''+boton['type']+'''">'''+boton['text']+'''</a>
         '''
 
     html+='''
@@ -462,6 +463,7 @@ function LoadAnim(){
     for Event in Events:
         js+='AnimSeqnc = [];'
         for Child in Event.hijos:
+            
             if(Child.nombre == "transition"):
                 [sx,sy,sz] = Child.attributos['start'].split()
                 [ex,ey,ez] = Child.attributos['end'].split()   
@@ -469,6 +471,7 @@ function LoadAnim(){
     Aux = {target:"'''+Child.attributos['target']+'''",what:"'''+Child.attributos['what']+'''",sx:'''+sx+''',sy:'''+sy+''',sz:'''+sz+''',ex:'''+ex+''',ey:'''+ey+''',ez:'''+ez+''',duration:'''+Child.attributos['duration']+'''};
     AnimSeqnc.push(CreateTransition(Aux));
                 '''
+            
             if(Child.nombre == "sequence"):
                 js+='''
     AnimArray = [];
@@ -483,6 +486,7 @@ function LoadAnim(){
                 js+='''
     AnimSeqnc.push(new AR.AnimationGroup(AR.CONST.ANIMATION_GROUP_TYPE.SEQUENTIAL,AnimArray));
                 '''
+            
             if(Child.nombre == "parallel"):
                 js+='''
     AnimArray = [];
@@ -497,14 +501,89 @@ function LoadAnim(){
                 js+='''
     AnimSeqnc.push(new AR.AnimationGroup(AR.CONST.ANIMATION_GROUP_TYPE.PARALLEL,AnimArray));
                 '''
+
+            if(Child.nombre == "set"):
+                js+='''
+    AnimSeqnc.push( new AR.PropertyAnimation(
+            Models["'''+Child.attributos['target']+'''"],
+            "translate.x",
+            Models["'''+Child.attributos['target']+'''"].translate.x, 
+            Models["'''+Child.attributos['target']+'''"].translate.x, 
+            1,
+            {type: AR.CONST.EASING_CURVE_TYPE.LINEAR}
+                '''
+                if(Child.attributos['what'] == "visible"):
+                    js+='''
+            ,{ onFinish : function() { Models["'''+Child.attributos['target']+'''"].enabled = '''+Child.attributos['to']+'''; } }
+                    '''
+                js+='''
+    ));
+                '''
+
+            if(Child.nombre == "toggle"):
+                js+='''
+    var '''+Child.attributos['id']+''' = Models["'''+Child.attributos['target']+'''"].enabled
+    '''+Child.attributos['id']+''' = !'''+Child.attributos['id']+'''
+    AnimSeqnc.push( new AR.PropertyAnimation(
+            Models["'''+Child.attributos['target']+'''"],
+            "translate.x",
+            Models["'''+Child.attributos['target']+'''"].translate.x, 
+            Models["'''+Child.attributos['target']+'''"].translate.x, 
+            1,
+            {type: AR.CONST.EASING_CURVE_TYPE.LINEAR}
+            ,{ onFinish : function() { Models["'''+Child.attributos['target']+'''"].enabled = '''+Child.attributos['id']+'''; } }
+    ));
+                '''
+
+            if(Child.nombre == "play"):
+                js+='''
+    AnimSeqnc.push( new AR.PropertyAnimation(
+            Models["'''+Child.attributos['target']+'''"],
+            "translate.x",
+            Models["'''+Child.attributos['target']+'''"].translate.x, 
+            Models["'''+Child.attributos['target']+'''"].translate.x, 
+            1,
+            {type: AR.CONST.EASING_CURVE_TYPE.LINEAR}
+            ,{ onFinish : function() { Sounds["'''+Child.attributos['start']+'''"].play(); } }
+    ));
+                '''
+
+
+
         js+='''
     Animations["'''+Event.attributos['id']+'''"] = new AR.AnimationGroup(AR.CONST.ANIMATION_GROUP_TYPE.SEQUENTIAL,AnimSeqnc);
         '''
     js+='''
 }
+    '''
 
+    js+='''
+    var Sounds = {}
+
+    function LoadAudio(){
+    '''
+    for audio in audios:
+        js+='''
+    Sounds["'''+audio['id']+'''"] = new AR.Sound(
+        "assets/sounds/'''+audio['filename']+'''"
+        '''
+        if audio['playonload'] == 'true':
+            js+='''
+            ,{onLoaded : function(){Sounds["'''+audio['id']+'''"].play();}}
+            '''
+        js+='''
+        );
+    
+        Sounds["'''+audio['id']+'''"].load();
+        '''
+    js+='''
+    }
+    '''
+
+    js+='''
 $(document).ready(function(){
     createTracker();
+    LoadAudio();
     LoadAnim();
 });
 
@@ -513,25 +592,26 @@ $(document).ready(function(){
 
     for Model in Models:
         js+='''
-    Models["'''+Model.attributos['id']+'''"].onClick(function(){
+    Models["'''+Model.attributos['id']+'''"].onClick = function(){
         '''
         for Event in Model.hijos:
             js+='''
         Animations["'''+Event.attributos['id']+'''"].start(1);
             '''
         js+='''
-        });
+        }
         '''
+
     for Button in Buttons:
         js+='''
-    $("'''+Button.attributos['id']+'''").click(function() {
+    $("'''+Button.attributos['id']+'''").click = function() {
         '''
         for Event in Button.hijos:
             js+='''
         Animations["'''+Event.attributos['id']+'''"].start(1);
             '''
         js+='''
-    });
+    }
         '''
     js+='''
 });
@@ -637,8 +717,10 @@ def Assing_Auto_ID_AUX(Arbol,key,index):
     if(Arbol.nombre == key and not 'id' in Arbol.attributos):
         Arbol.attributos['id'] = Arbol.nombre+"_"+str(index)
 
+    inx = index
     for child in Arbol.hijos:
-        Assing_Auto_ID_AUX(child,key,index+1)
+        inx += 1 
+        Assing_Auto_ID_AUX(child,key,inx)
 
 def Default (Arbol):
     Assing_Auto_ID(Arbol)
@@ -697,17 +779,21 @@ Res = parser.parse(data,tracking=True)
 
 
 Default(Res)
+
 Documentos(Res)
+
 
 
 manifest = Find(Res,'manifest')[0]
 objects  = Find(Res,'object')
+audios   = Find(Res,'audio')
 
 import os
 import shutil
 directorio_base = os.path.join('./public_html')
 directorio_assets = os.path.join('./public_html/assets')
 directorio_images = os.path.join('./public_html/assets/images')
+directorio_audios = os.path.join('./public_html/assets/sounds')
 directorio_javascript = os.path.join('./public_html/assets/javascript')
 directorio_stylesheet = os.path.join('./public_html/assets/stylesheet')
 directorio_tracker = os.path.join('./public_html/assets/tracker')
@@ -719,6 +805,7 @@ if os.path.isdir(directorio_base):
 os.mkdir(directorio_base)
 os.mkdir(directorio_assets)
 os.mkdir(directorio_images)
+os.mkdir(directorio_audios)
 os.mkdir(directorio_javascript)
 os.mkdir(directorio_stylesheet)
 os.mkdir(directorio_tracker)
@@ -728,7 +815,8 @@ open("My.css","w")
 shutil.copy2('./'+manifest['tracker'], './public_html/assets/tracker')
 for objeto in objects:
     shutil.copy2('./'+objeto['source'], './public_html/assets/models')
-
+for audio in audios:
+    shutil.copy2('./'+audio['filename'], './public_html/assets/sounds')
 shutil.copy2('./JERA.js', './public_html/assets/javascript')
 shutil.copy2('./My.js', './public_html/assets/javascript')
 shutil.copy2('../ADE/ade.js', './public_html/assets/javascript')

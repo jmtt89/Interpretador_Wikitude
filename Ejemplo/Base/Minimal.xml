@@ -6,25 +6,25 @@
 		<event type="onclick" >
 			<parallel>
 				<transition what="scale" end="0.02 0.02 0.02" duration="1000"/>
-				<transition what="rotation" end="90 180 90" duration="1000"/>
+				<transition what="rotate" end="90 180 90" duration="1000"/>
 			</parallel>
 		</event>
 	</object>
 
-	<audio id="Aud_1" filename="NOMBRE DEL AUDIO" />
+	<audio id="Aud_1" filename="Total_Breakdown.mp3" />
 
 	<button id= 'ID_Boton_1' position = '10 540' text = "Botón 1" >
 		<event type="onclick" target="Flyer">
 			<sequence>
-				<transition what="position" end="2 2 0" duration="1000" />
-				<transition what="position" end="2 2 0" duration="1000" />
+				<transition what="translate" end="2 2 0" duration="1000" />
+				<transition what="translate" end="2 2 0" duration="1000" />
 			</sequence>
 		</event>
 	</button>
 	
 	<button id='ID_Boton_2' position = '10 140' text = "Botón 2" >
 		<event type="onclick" target="Flyer">
-			<play target="Aud_1" /> 
+			<play start="Aud_1" /> 
 			<toggle/> 
 		</event>
 	</button>
@@ -32,8 +32,8 @@
 	<button id='ID_Boton_3' position = '10 300' text = "Botón 3">
 		<event type="onclick" target="Flyer">
 			<transition what="scale" end="1 1 1" duration="10000"/>
-			<play target="Aud_1" />
-			<transition what="rotation" end="45 90 15" duration="10000"/>
+			<play start="Aud_1" />
+			<transition what="rotate" end="45 90 15" duration="10000"/>
 		</event>
 	</button>
 	
